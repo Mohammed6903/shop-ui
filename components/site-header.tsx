@@ -12,20 +12,23 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
 
 interface HeaderProps {
   onSearch: (value: string) => void;
   onCategorySelect: (category: string | null) => void;
-  quantity: number;
 }
 
-export function SiteHeader({ onSearch, onCategorySelect, quantity }: HeaderProps) {
+export function SiteHeader({ onSearch, onCategorySelect}: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
+
+  const quantity = useSelector((state: RootState) => state.cart.quantity);
 
   useEffect(() => {
     fetchCategories();
@@ -44,7 +47,6 @@ export function SiteHeader({ onSearch, onCategorySelect, quantity }: HeaderProps
   const handleSearch = (value: string) => {
     setSearchTerm(value);
     onSearch(value);
-    setIsSuggestionsOpen(value.length > 0);
   };
 
   const handleCategorySelect = (category: string | null) => {
@@ -52,7 +54,7 @@ export function SiteHeader({ onSearch, onCategorySelect, quantity }: HeaderProps
     setSearchTerm(category || "");
     setIsSuggestionsOpen(false);
     if (category !== null){
-        handleSearch(category);
+      handleSearch(category);
     }
     setIsCommandOpen(false);
   };
@@ -125,19 +127,32 @@ export function SiteHeader({ onSearch, onCategorySelect, quantity }: HeaderProps
               />
               <Search className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
 
-              {isSuggestionsOpen && filteredCategories.length > 0 && (
+              {isSuggestionsOpen && (
                 <Command className="absolute w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                  <CommandList>
-                    <CommandGroup heading="Categories">
-                      {filteredCategories.map((category) => (
-                        <CommandItem
-                          key={category}
-                          onSelect={() => handleCategorySelect(category)}
-                          className="cursor-pointer hover:bg-gray-100 p-2"
-                        >
-                          {category}
-                        </CommandItem>
-                      ))}
+                  <CommandList className="show-scrollbar">
+                    <CommandGroup>
+                      {filteredCategories.length > 0 ? (
+                        filteredCategories.map((category) => (
+                          <CommandItem
+                            key={category}
+                            onSelect={() => handleCategorySelect(category)}
+                            onClick={() => handleCategorySelect(category)}
+                            className="cursor-pointer hover:bg-gray-100 p-2"
+                          >
+                            {category}
+                          </CommandItem>
+                        ))
+                      ) : (
+                        categories.map((category) => (
+                          <CommandItem
+                            key={category}
+                            onSelect={() => handleCategorySelect(category)}
+                            className="cursor-pointer hover:bg-gray-100 p-2"
+                          >
+                            {category}
+                          </CommandItem>
+                        ))
+                      )}
                     </CommandGroup>
                   </CommandList>
                 </Command>
@@ -167,23 +182,36 @@ export function SiteHeader({ onSearch, onCategorySelect, quantity }: HeaderProps
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
                 onFocus={() => setIsSuggestionsOpen(true)}
-                onBlur={() => setTimeout(() => setIsSuggestionsOpen(false), 200)}
+                onBlur={() => setTimeout(() => {console.log("Input blurred"); setIsSuggestionsOpen(false)}, 200)}
               />
               <Search className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
 
-              {isSuggestionsOpen && filteredCategories.length > 0 && (
+              {isSuggestionsOpen && (
                 <Command className="absolute w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                   <CommandList>
-                    <CommandGroup heading="Categories">
-                      {filteredCategories.map((category) => (
-                        <CommandItem
-                          key={category}
-                          onSelect={() => handleCategorySelect(category)}
-                          className="cursor-pointer hover:bg-gray-100 p-2"
-                        >
-                          {category}
-                        </CommandItem>
-                      ))}
+                    <CommandGroup>
+                      {filteredCategories.length > 0 ? (
+                        filteredCategories.map((category) => (
+                          <CommandItem
+                            key={category}
+                            onSelect={() => handleCategorySelect(category)}
+                            onClick={() => handleCategorySelect(category)}
+                            className="cursor-pointer hover:bg-gray-100 p-2"
+                          >
+                            {category}
+                          </CommandItem>
+                        ))
+                      ) : (
+                        categories.map((category) => (
+                          <CommandItem
+                            key={category}
+                            onSelect={() => handleCategorySelect(category)}
+                            className="cursor-pointer hover:bg-gray-100 p-2"
+                          >
+                            {category}
+                          </CommandItem>
+                        ))
+                      )}
                     </CommandGroup>
                   </CommandList>
                 </Command>

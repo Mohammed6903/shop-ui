@@ -9,8 +9,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { SiteHeader } from "./site-header";
 import React from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { setQuantity } from "@/store/reducers";
+import { RootState } from "@/store/store";
 
 interface Rating {
   rate: number;
@@ -29,8 +31,6 @@ interface Product {
 interface ProductSectionProps {
     searchTerm?: string;
     selectedCategory?: string | null;
-    setQuantity: React.Dispatch<React.SetStateAction<number>>;
-    quantity: number;
 }
 
 const BASE_URL = "https://fakestoreapi.com/products";
@@ -38,44 +38,49 @@ const BASE_URL = "https://fakestoreapi.com/products";
 export default function ProductSection({
     searchTerm = "", 
     selectedCategory = null,
-    quantity = 1,
-    setQuantity
 }: ProductSectionProps) {
     const [products, setProducts] = useState<Product[]>([]);
     const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-    const [pQuantity, setPQuantity] = useState(1);
+    const [productQuantities, setProductQuantities] = useState<Record<number, number>>({});
+
+    const quantity = useSelector((state: RootState) => state.cart.quantity);
+    const dispatch = useDispatch();
+
+    const handleSetQuantity = (newQuantity: number) => {
+      dispatch(setQuantity(newQuantity));
+    };
 
     const fetchProducts = useCallback(async (category?: string) => {
-        try {
+      try {
         setIsLoading(true);
         const url = category ? `${BASE_URL}/category/${category}` : BASE_URL;
         const res = await fetch(url, {
-            signal: AbortSignal.timeout(10000),
+          signal: AbortSignal.timeout(10000),
         });
 
         if (!res.ok) {
-            throw new Error(`HTTP error! status: ${res.status}`);
+          throw new Error(`HTTP error! status: ${res.status}`);
         }
 
         const data: Product[] = await res.json();
         
         if (!Array.isArray(data)) {
-            throw new Error("Invalid data format received");
+          throw new Error("Invalid data format received");
         }
 
         setProducts(data);
         setFilteredProducts(data);
         setError(null);
-        } catch (err) {
+      } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
         setError(errorMessage);
         console.error("Failed to fetch products:", err);
-        } finally {
+      } finally {
         setIsLoading(false);
-        }
+      }
     }, []);
 
     useEffect(() => {
@@ -84,9 +89,9 @@ export default function ProductSection({
 
     useEffect(() => {
         if (selectedCategory) {
-        fetchProducts(selectedCategory);
+          fetchProducts(selectedCategory);
         } else {
-        fetchProducts();
+          fetchProducts();
         }
     }, [selectedCategory, fetchProducts]);
 
@@ -100,27 +105,47 @@ export default function ProductSection({
         }
     }, [searchTerm, products]);
 
-    const handleAddToCart = (product: Product) => {
-        setSelectedProduct(product);
-        setQuantity(quantity+pQuantity);
+    const handleClick = (product: Product) => {
+      setSelectedProduct(product);
+      if (!productQuantities[product.id]) {
+        setProductQuantities((prev) => ({ ...prev, [product.id]: 1 }));
+      }
+    };
+
+    const handleAddToCart = () => {
+      if (selectedProduct) {
+        const currentPQuantity = productQuantities[selectedProduct.id] || 1;
+        handleSetQuantity(quantity + currentPQuantity);
+        setSelectedProduct(null);
+      }
     };
 
     const closeModal = () => {
-        setSelectedProduct(null);
-        if (pQuantity < 2){
-            setQuantity(quantity+1);
-        }
+      setSelectedProduct(null);
+      if (selectedProduct && (productQuantities[selectedProduct.id] || 1) < 2) {
+        setQuantity(quantity + 1);
+      }
     };
 
-    const incrementQuantity = () => {
-        setPQuantity((prev: number) => prev + 1);
+    const incrementPQuantity = () => {
+      if (selectedProduct) {
+        setProductQuantities((prev) => ({
+          ...prev,
+          [selectedProduct.id]: (prev[selectedProduct.id] || 1) + 1,
+        }));
+      }
+    };
+  
+    const decrementPQuantity = () => {
+      if (selectedProduct) {
+        setProductQuantities((prev) => ({
+          ...prev,
+          [selectedProduct.id]: Math.max(1, (prev[selectedProduct.id] || 1) - 1),
+        }));
+      }
     };
 
-    const decrementQuantity = () => {
-        setPQuantity((prev) => (prev > 1 ? prev - 1 : 1));
-    };
-
-  const StarRating = React.memo(({ rating }: { rating: number }) => {
+    const StarRating = React.memo(({ rating }: { rating: number }) => {
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 >= 0.5;
     const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
@@ -216,10 +241,10 @@ export default function ProductSection({
                       </div>
                       <Button
                         className="w-full mt-4 transition-colors"
-                        onClick={() => handleAddToCart(product)}
+                        onClick={() => handleClick(product)}
                         aria-label={`Add ${product.title} to cart`}
                         >
-                            Add To Cart
+                          Add To Cart
                         </Button>
                         </CardContent>
                   </Card>
@@ -269,22 +294,22 @@ export default function ProductSection({
                             variant="ghost"
                             size="icon"
                             className="h-10 px-2"
-                            onClick={decrementQuantity}
+                            onClick={decrementPQuantity}
                         >
                             <Minus className="h-4 w-4" />
                         </Button>
-                        <div className="w-12 text-center">{pQuantity}</div>
+                        <div className="w-12 text-center">{productQuantities[selectedProduct.id] || 1}</div>
                             <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-10 px-2"
-                                onClick={incrementQuantity}
+                                onClick={incrementPQuantity}
                             >
                             <Plus className="h-4 w-4" />
                             </Button>
                         </div>
-                        <Button className="flex-1" variant="default">
-                            Buy Now
+                        <Button className="flex-1" variant="default" onClick={handleAddToCart}>
+                          Buy Now
                         </Button>
                     </div>
                 </div>
